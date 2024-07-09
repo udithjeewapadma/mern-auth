@@ -1,16 +1,22 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-dotenv.config();
+import userRoutes from './routes/user.route.js';
 
-mongoose.connect(process.env.MONGO).then(()=> {
-    console.log("Connected to MONGODB");
-}).catch((err) => {
-    console.log(err);
-});
+dotenv.config();
 
 const app = express();
 
-app.listen(3000, ()=>{
-    console.log("Server is running on port 3000")
-})
+mongoose.connect(process.env.MONGO).then(() => {
+  console.log("Connected to MONGODB");
+}).catch((err) => {
+  console.log(err);
+});
+
+app.use(express.json()); // Ensure your app can parse JSON
+
+app.use("/api/user", userRoutes);
+
+app.listen(3000, () => {
+  console.log("Server is running on port 3000");
+});
