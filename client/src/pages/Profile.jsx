@@ -2,18 +2,16 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useRef, useState, useEffect } from 'react';
 import { getDownloadURL, getStorage, ref, uploadBytesResumable } from 'firebase/storage';
 import { app } from '../firebase';
-import { updateUserStart, updateUserFailure, updateUserSuccess } from '../redux/user/userSlice';
+import { updateUserStart, updateUserFailure, updateUserSuccess, deleteUserStart, deleteUserFailure, deleteUserSuccess } from '../redux/user/userSlice';
 
 export default function Profile() {
-  const dispatch =useDispatch();
+  const dispatch = useDispatch();
   const fileRef = useRef(null);
   const [image, setImage] = useState(undefined);
   const [imagePercent, setImagePercent] = useState(0);
   const [imageError, setImageError] = useState(false);
   const [formData, setFormData] = useState({});
   const [updateSuccess, setUpdateSuccess] = useState(false);
-
-
 
   const { currentUser, loading, error } = useSelector(state => state.user);
   useEffect(() => {
@@ -54,26 +52,50 @@ export default function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try{
+    try {
       dispatch(updateUserStart());
-      const res = await fetch (`/api/user/update/${currentUser._id}`,{
+      const token = currentUser.token; // Assuming the token is stored in currentUser
+      const res = await fetch(`/api/user/update/${currentUser._id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`, // Include the token in the Authorization header
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if(data.success === false){
+      if (data.success === false) {
         dispatch(updateUserFailure(data));
         return;
       }
       dispatch(updateUserSuccess(data));
       setUpdateSuccess(true);
-    } catch(error){
+    } catch (error) {
       dispatch(updateUserFailure(error));
     }
   };
+
+  const handleDeleteAccount = async () => {
+    try {
+      dispatch(deleteUserStart());
+      const token = currentUser.token; // Assuming the token is stored in currentUser
+      const res = await fetch(`/api/user/delete/${currentUser._id}`, {
+        method: "DELETE",
+        headers: {
+          'Authorization': `Bearer ${token}`, // Include the token in the Authorization header
+        },
+      });
+      const data = await res.json();
+      if (data.success === false) {
+        dispatch(deleteUserFailure(data));
+        return;
+      }
+      dispatch(deleteUserSuccess(data));
+    } catch (error) {
+      dispatch(deleteUserFailure(error));
+    }
+  }
+
   return (
     <div className='p-2 max-w-sm mx-auto'>
       <h1 className='text-3xl font-semibold text-center my-7'>Profile</h1>
@@ -92,14 +114,14 @@ export default function Profile() {
           className='h-24 w-24 self-center cursor-pointer rounded-full object-cover'
           onClick={() => fileRef.current.click()}
         />
-        <p className=' text-sm self-center'>
+        <p className='text-sm self-center'>
           {imageError ? (
-            <span className=' text-red-700'>Error uploding image (file size must be less than 2MB)</span>) : imagePercent > 0 && 
-            imagePercent < 100 ? (
-              <span className=' text-slate-700'>{`Uploading: ${imagePercent} % `}</span>) : imagePercent === 100 ?
-              (
-                <span className=' text-green-700'>Image uploaded successfully</span>) : ''
-          
+            <span className='text-red-700'>Error uploading image (file size must be less than 2MB)</span>
+          ) : imagePercent > 0 && imagePercent < 100 ? (
+            <span className='text-slate-700'>{`Uploading: ${imagePercent}%`}</span>
+          ) : imagePercent === 100 ? (
+            <span className='text-green-700'>Image uploaded successfully</span>
+          ) : ''
           }
         </p>
         <input
@@ -117,7 +139,6 @@ export default function Profile() {
           placeholder='Email'
           className='bg-slate-100 rounded-md p-2'
           onChange={handleChange}
-
         />
         <input
           type='password'
@@ -125,7 +146,6 @@ export default function Profile() {
           placeholder='Password'
           className='bg-slate-100 rounded-md p-2'
           onChange={handleChange}
-
         />
         <button
           type='submit'
@@ -135,12 +155,11 @@ export default function Profile() {
         </button>
       </form>
       <div className='flex justify-between mt-5'>
-        <span className='text-red-600 cursor-pointer'>Delete Account</span>
+        <span onClick={handleDeleteAccount} className='text-red-600 cursor-pointer'>Delete Account</span>
         <span className='text-red-600 cursor-pointer'>Sign Out</span>
       </div>
-      <p className=' text-red-700 mt-5'>{error && 'Something went wrong!'}</p>
-      <p className=' text-green-700 mt-5'>{updateSuccess && 'User is updated Successfully!'}</p>
-
+      <p className='text-red-700 mt-5'>{error && 'Something went wrong!'}</p>
+      <p className='text-green-700 mt-5'>{updateSuccess && 'User is updated Successfully!'}</p>
     </div>
   );
 }
